@@ -1,27 +1,28 @@
 'use strict';
-// Express
-const express = require('express');
 
+
+
+
+// get all environment variable you need
+require('dotenv').config();
+const express = require('express');
 const superagent = require('superagent');
+const cors = require('cors');
 const pg = require('pg');
 const DATABASE_URL = process.env.DATABASE_URL;
 const client = new pg.Client(DATABASE_URL);
-client.on('error', error => { throw error; })
-
 
 // initialize a server
 const server = express();
-// Cross Origin Resource Sharing
-const cors = require('cors');
 server.use(cors()); // give access
-// get all environment variable you need
-require('dotenv').config();
-const PORT = process.env.PORT || 3000;
+
+
+const PORT = process.env.PORT ;
 const GEOCODE_API_KEY = process.env.GEOCODE_API_KEY;
 const DARKSKY_API_KEY = process.env.DARKSKY_API_KEY;
 const EVENTFUL_API_KEY = process.env.EVENTFUL_API_KEY;
 // Make the app listening
-server.listen(PORT, () => console.log(' hello Listening at port 3000'));
+server.listen(PORT, () => console.log('hello Listening at port 3000'));
 
 
 
@@ -29,60 +30,82 @@ server.get('/', (request, response) => {
   response.status(200).send('Lets Rock !!');
 });
 
+
+
 // first step just like event listener
 server.get('/location', locationHandler);
 
 // cons function
-function Location(city, locationData) {
-  this.formatted_query = locationData[0].display_name;
-  this.latitude = locationData[0].lat;
-  this.longitude = locationData[0].lon;
+function Location(city, data) {
+  console.log('constructor');
+  console.log(data);
+  this.formatted_query = data.display_name;
+  this.latitude = data.lat;
+  this.longitude = data.lon;
   this.search_query = city;
 }
+
+// function Location(data) {
+//   this.city = data.city;
+//   this.latitude = data.geometry.location.lat;
+//   this.longitude = data.geometry.location.lng;
+// }
 
 
 //where the magic happend...
 function locationHandler(request, response) {
   // Read the city from the user (request) and respond
+  console.log('handler');
   let city = request.query['city'];
-  client
+
   getLocationData(city)
     .then((data) => {
       response.status(200).send(data);
     });
-
-  // let sql = `SELECT city FROM information ;`;
-  // console.log(client.query(sql));
-  // console.log('insidehandler');
-  // let print = `INSERT INTO information(city) VALUES('${city}')`;
-
-  // if (client.query(sql)) {
-  //   console.log(client.sql);
-  //   console.log('true');
-  //   response.status(200).send(sql);
-  //   console.log('true');
-
-  // } else {
-  //   console.log('false');
-  //   getLocationData(city)
-
-  //     .then((data) => {
-  //       client.print;
-  //       response.status(200).send(data);
-  //     });
-
-  // }
-
 }
+
+
 function getLocationData(city) {
-  const url = `https://us1.locationiq.com/v1/search.php?key=${GEOCODE_API_KEY}&q=${city}&format=json&limit=1`;
-  // Superagent
-  return superagent.get(url)
-    .then((data) => {
-      let location = new Location(city, data.body);
-      return location;
+
+  let sql = `SELECT * FROM information WHERE city = $1`;
+  let values = [city];
+  console.log('loca data');
+  return client.query(sql, values)
+    .then(results => {
+      if (results.rowCount) {
+        return results.rows[0];
+      } else {
+        const url = `https://us1.locationiq.com/v1/search.php?key=${GEOCODE_API_KEY}&q=${city}&format=json&limit=1`;
+        console.log('new f1 works');
+
+        return superagent.get(url)
+        
+          .then(data => dataBaseLocation(city, data.body));
+      }
     });
 }
+
+
+// //////
+function dataBaseLocation(city, data) {
+  console.log('database location works');
+  console.log(data);
+
+  const location = new Location(city ,data[0]);
+  let SQL = `
+    INSERT INTO information (city, latitude, longitude) 
+    VALUES ($1, $2, $3) 
+    RETURNING *
+  `;
+
+  let values = [city, location.latitude, location.longitude];
+  return client.query(SQL, values)
+    .then(results => results.rows[0]);
+}
+
+/////////////////////////////
+
+
 
 
 // first step , just to make our code cleaner
@@ -158,3 +181,6 @@ server.use('*', (request, response) => {
 server.use((error, request, response) => {
   response.status(500).send(error);
 });
+
+client.on('error', error => { throw error; })
+client.connect().then( () => {server.listen(PORT, () => console.log('Server up on', PORT));})
