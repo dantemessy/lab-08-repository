@@ -113,24 +113,48 @@ function Weather(day) {
 }
 
 function weatherHandler(request, response) {
+  let sql = `INSERT INTO weathers (forecast, time) VALUES($1, $2)`;
   let lat = request.query['latitude'];
   let lng = request.query['longitude'];
-  getWeatherData(lat, lng)
-    .then((data) => {
-      response.status(200).send(data);
-    });
+  return client.query(sql,lat,lng)
+  .then(results => {
+  if (results.rowCount) {
+    return results.rows[0];
+  } else {
+    const url = `https://api.darksky.net/forecast/${DARKSKY_API_KEY}/${lat},${lng}`;
+    return superagent.get(url)
 
-}
-
-function getWeatherData(lat, lng) {
-  const url = `https://api.darksky.net/forecast/${DARKSKY_API_KEY}/${lat},${lng}`;
-  return superagent.get(url)
-    .then((weatherData) => {
-      //   console.log(weatherData.body.daily.data);
-      let weather = weatherData.body.daily.data.map((day) => new Weather(day));
-      return weather;
+          .then(data => dataBaseWeather(lat, lng));
+      }
     });
 }
+function dataBaseLocation(lat, lng) {
+  let weather = weatherData.body.daily.data.map((day) => new Weather(day));
+  let SQL = `
+  INSERT INTO information (forcast, time) 
+  VALUES ($1, $2) 
+  RETURNING *
+`;
+let values = [weather.forecast, weather.time];
+  return client.query(SQL,values)
+    .then(results => results.rows[0]);
+}
+
+//   getWeatherData(lat, lng)
+//     .then((data) => {
+//       response.status(200).send(data);
+//     });
+
+// }
+
+// function getWeatherData(lat, lng) {
+//   return superagent.get(url)
+//     .then((weatherData) => {
+//       //   console.log(weatherData.body.daily.data);
+//       let weather = weatherData.body.daily.data.map((day) => new Weather(day));
+//       return weather;
+//     });
+// }
 
 /////////////////////////// test
 
@@ -235,7 +259,7 @@ function getYelpData(lat, lng){
       console.log(yelpdata.body.businesses);
 
       let yelps = yelpdata.body.businesses.map((business) => {
-        new Yelp(business) ;
+       return new Yelp(business) ;
       })
       return yelps ;
     })
