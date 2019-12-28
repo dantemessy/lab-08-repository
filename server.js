@@ -154,7 +154,7 @@ function eventHandler(request, response) {
 }
 
 function getEventData(lat, lng) {
-  const url = `http://api.eventful.com/json/events/search?app_key=${EVENTFUL_API_KEY}&q=amman&${lat},${lng}`;
+  const url = `http://api.eventful.com/json/events/search?app_key=${EVENTFUL_API_KEY}&where=${lat},${lng}`;
   // console.log(url);
   return superagent.get(url)
     .then((eventData) => {
