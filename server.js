@@ -167,9 +167,8 @@ function getEventData(lat, lng) {
 
 
 ///////////////////////////
-
+/////////////////////////////////
 ///////////////// Movies ////////////////
-
 server.get('/movies', movieHandler);
 
 function Movie(movie) {
@@ -177,7 +176,7 @@ function Movie(movie) {
   this.overview = movie.overview;
   this.average_votes = movie.vote_average;
   this.total_votes = movie.vote_count;
-  this.image_url = `https://image.tmdb.org/t/p/w200_and_h300_bestv2${movie.poster_path}`;
+  this.image_url = `https://image.tmdb.org/t/p/w500/${movie.poster_path}`
   this.popularity = movie.popularity;
   this.released_on = movie.release_date;
 }
@@ -186,7 +185,7 @@ function Movie(movie) {
 function movieHandler(request, response) {
   // let city = request.query.search_query;
   let city = request.query['city'];
-  console.log(city);
+  // console.log(city);
   // let lat = request.query['latitude'];
   // let lng = request.query['longitude'];
   getMoviesData(city)
@@ -203,13 +202,57 @@ function getMoviesData(city) {
       return mov;
     })
 }
-
-
-
-
-
-
 ///////////////// Movies ////////////////
+//////////////////////////////
+/////////////////////
+
+
+
+///////////////// Yelp ////////////////
+//////////////////////////////
+/////////////////////
+
+server.get('/yelp' , yelpHandler) ;
+
+function yelpHandler (request, response) {
+  let lat = request.query['latitude'] ;
+  let lng = request.query['longitude'] ;
+
+  getYelpData(lat, lng)
+    .then((data) => {
+      response.status(200).send(data);
+    });
+}
+
+
+function getYelpData(lat, lng){
+  const url = `https://api.yelp.com/v3/businesses/search?term=restaurant&latitude=${lat}&longitude=${lng}` ;
+  console.log(url)
+  console.log('get data boooy')
+  return superagent.get(url)
+    .set('Authorization', `Bearer ${process.env.YELP_API_KEY}`)
+    .then((yelpdata) => {
+      console.log(yelpdata.body.businesses);
+
+      let yelps = yelpdata.body.businesses.map((business) => {
+        new Yelp(business) ;
+      })
+      return yelps ;
+    })
+}
+
+
+function Yelp (business) {
+  this.name = business.name ;
+  this.image_url = business.image_url ;
+  this.price = business.price ;
+  this.rating = business.rating ;
+  this.url = business.url ;
+}
+///////////////// yelp ////////////////
+//////////////////////////////
+/////////////////////
+
 
 
 
