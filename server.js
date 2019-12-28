@@ -21,6 +21,7 @@ const PORT = process.env.PORT ;
 const GEOCODE_API_KEY = process.env.GEOCODE_API_KEY;
 const DARKSKY_API_KEY = process.env.DARKSKY_API_KEY;
 const EVENTFUL_API_KEY = process.env.EVENTFUL_API_KEY;
+const MOVIE_API_KEY = process.env.MOVIE_API_KEY;
 // Make the app listening
 server.listen(PORT, () => console.log('hello Listening at port 3000'));
 
@@ -37,25 +38,19 @@ server.get('/location', locationHandler);
 
 // cons function
 function Location(city, data) {
-  console.log('constructor');
-  console.log(data);
+  // console.log('constructor');
+  // console.log(data);
   this.formatted_query = data.display_name;
   this.latitude = data.lat;
   this.longitude = data.lon;
   this.search_query = city;
 }
 
-// function Location(data) {
-//   this.city = data.city;
-//   this.latitude = data.geometry.location.lat;
-//   this.longitude = data.geometry.location.lng;
-// }
-
 
 //where the magic happend...
 function locationHandler(request, response) {
   // Read the city from the user (request) and respond
-  console.log('handler');
+  // console.log('handler');
   let city = request.query['city'];
 
   getLocationData(city)
@@ -69,17 +64,17 @@ function getLocationData(city) {
 
   let sql = `SELECT * FROM information WHERE city = $1`;
   let values = [city];
-  console.log('loca data');
+  // console.log('loca data');
   return client.query(sql, values)
     .then(results => {
       if (results.rowCount) {
         return results.rows[0];
       } else {
         const url = `https://us1.locationiq.com/v1/search.php?key=${GEOCODE_API_KEY}&q=${city}&format=json&limit=1`;
-        console.log('new f1 works');
+        // console.log('new f1 works');
 
         return superagent.get(url)
-        
+
           .then(data => dataBaseLocation(city, data.body));
       }
     });
@@ -88,8 +83,8 @@ function getLocationData(city) {
 
 // //////
 function dataBaseLocation(city, data) {
-  console.log('database location works');
-  console.log(data);
+  // console.log('database location works');
+  // console.log(data);
 
   const location = new Location(city ,data[0]);
   let SQL = `
@@ -103,9 +98,9 @@ function dataBaseLocation(city, data) {
     .then(results => results.rows[0]);
 }
 
+
+
 /////////////////////////////
-
-
 
 
 // first step , just to make our code cleaner
@@ -171,7 +166,53 @@ function getEventData(lat, lng) {
 }
 
 
-/////////////////////////// test
+///////////////////////////
+
+///////////////// Movies ////////////////
+
+server.get('/movies', movieHandler);
+
+function Movie(movie) {
+  this.title = movie.title;
+  this.overview = movie.overview;
+  this.average_votes = movie.vote_average;
+  this.total_votes = movie.vote_count;
+  this.image_url = `https://image.tmdb.org/t/p/w200_and_h300_bestv2${movie.poster_path}`;
+  this.popularity = movie.popularity;
+  this.released_on = movie.release_date;
+}
+
+
+function movieHandler(request, response) {
+  // let city = request.query.search_query;
+  let city = request.query['city'];
+  console.log(city);
+  // let lat = request.query['latitude'];
+  // let lng = request.query['longitude'];
+  getMoviesData(city)
+    .then((data) => {
+      response.status(200).send(data);
+    });
+}
+
+function getMoviesData(city) {
+  const url = `https://api.themoviedb.org/3/search/movie?api_key=${MOVIE_API_KEY}&query=${city}`;
+  return superagent.get(url)
+    .then((movieData) => {
+      let mov= movieData.body.results.map( movie => new Movie(movie));
+      return mov;
+    })
+}
+
+
+
+
+
+
+///////////////// Movies ////////////////
+
+
+
 
 
 server.use('*', (request, response) => {
