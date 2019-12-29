@@ -71,6 +71,7 @@ function getLocationData(city) {
         return results.rows[0];
       } else {
         const url = `https://us1.locationiq.com/v1/search.php?key=${GEOCODE_API_KEY}&q=${city}&format=json&limit=1`;
+        console.log(url);
         // console.log('new f1 works');
 
         return superagent.get(url)
@@ -160,7 +161,7 @@ function getEventData(lat, lng) {
     .then((eventData) => {
       let dataBase = JSON.parse(eventData.text);
       //   console.log(dataBase.events.event[0].description);
-      let events = dataBase.events.event.map((day) => new Event(day));
+      let events = dataBase.events.event.map((day) => {return new Event(day)});
       return events;
     });
 }
@@ -196,6 +197,7 @@ function movieHandler(request, response) {
 
 function getMoviesData(city) {
   const url = `https://api.themoviedb.org/3/search/movie?api_key=${MOVIE_API_KEY}&query=${city}`;
+  
   return superagent.get(url)
     .then((movieData) => {
       let mov= movieData.body.results.map( movie => new Movie(movie));
@@ -232,10 +234,10 @@ function getYelpData(lat, lng){
   return superagent.get(url)
     .set('Authorization', `Bearer ${process.env.YELP_API_KEY}`)
     .then((yelpdata) => {
-      console.log(yelpdata.body.businesses);
+      // console.log(yelpdata.body.businesses);
 
       let yelps = yelpdata.body.businesses.map((business) => {
-        new Yelp(business) ;
+        return new Yelp(business) ;
       })
       return yelps ;
     })
